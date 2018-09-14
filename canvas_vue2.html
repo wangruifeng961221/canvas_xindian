@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="data.js" type="text/javascript"></script>
+    <style>
+        .time {
+            display: inline-block;
+            width: 50px;
+        }
+        .time_l {
+            margin-left: 42px;
+        }
+        .box {
+            background: #f00;
+            width: 0px;
+            height: 0px;
+            position: absolute;
+            opacity: 0.5;
+            cursor: move;
+            z-index: 99999;
+        }
+    </style>
+</head>
+<body>
+<div id="example-3">
+    <select v-model="selectedX" @change="handChange">
+        <option>1px/0.04ms</option>
+        <option>1px/0.08ms</option>
+        <option>1px/0.12ms</option>
+        <option>1px/0.16ms</option>
+    </select>
+    <span>{{ selectedX }}</span>
+
+    <select v-model="selectedY" @change="handChangeY">
+        <option>1px/20uv</option>
+        <option>1px/10uv</option>
+    </select>
+    <span>{{ selectedY }}</span>
+    <div id="example"
+         :style="{width:551*selected-51*(selected-1)+'px'}"
+         @mousedown="myOnmousedown($event)"
+         @mousemove="myOnmousemove($event)"
+         @mouseup="myOnmouseup">
+        <canvas id="ecg" :width=551*selected-51*(selected-1)+'px' :height=551+'px'></canvas>
+        <div style="white-space:nowrap;">
+            <span v-for="(item,index) in timeList+1" class="time" :class="index==0?'time_l':''">{{index/timeList*10|numFilter}}s</span>
+        </div>
+    </div>
+</div>
+</body>
+<script src="vue.js"></script>
+<script type="text/javascript">
+    document.onmousemove = function () {
+        console.log(7878);
+    };
+    document.onmouseup = function () {
+
+        document.onmousemove = null;
+        document.onmouseup = null;
+    }
+</script>
+<script>
+    new Vue({
+        el: '#example-3',
+        data: {
+            selectedX: '1px/0.04ms',
+            selected: 1,
+            timeList: 10,
+            TotalTime: '',        //总时间
+            XLength: '',           //x 轴长度
+            interval: '',             //间隔
+            standardPressure: '',     //标准电压
+            selectedY: '1px/20uv',
+            YHeight: 20,                // 高度动态变化
+            arrs: [],                    // 所有的数据
+            // canvasName: ['I', 'II', 'III'],                //图名字
+            YNameHeight: 0,                   //基线高度动态变
+            jointName: ['I', 'II', 'III', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'],               //导联名称
+            ////////////////////////////
+            // startX, startY 为鼠标点击时初始坐标
+            // diffX, diffY 为鼠标初始坐标与 box 左上角坐标之差，用于拖动
+            startX:'',
+            startY:'',
+            diffX:'',
+            diffY:'',
+            // 是否拖动，初始为 false
+            dragging :false,
+            e:'',
+        },
+        mounted() {
+            this.initCanvas();
+        },
+        filters: {
+            numFilter(value) {
+                // 截取当前数据到小数点后三位
+                let transformVal = Number(value).toFixed(3);
+                let realVal = transformVal.substring(0, transformVal.length - 1);
+                // num.toFixed(3)获取的是字符串
+                return Number(realVal)
+            }
+        },
+        methods: {
+            handChange() {
+                this.arrs = [];
+                if (this.selectedX == '1px/0.04ms') {
+                    this.selected = 1;
+                    this.timeList = 10;
+                }
+                if (this.selectedX == '1px/0.08ms') {
+                    this.selected = 2;
+                    this.timeList = 20;
+                }
+                if (this.selectedX == '1px/0.12ms') {
+                    this.selected = 3;
+                    this.timeList = 30;
+                }
+                if (this.selectedX == '1px/0.16ms') {
+                    this.selected = 4;
+                    this.timeList = 40;
+                }
+                setTimeout(() => {
+                    this.initCanvas();
+                });
+            },
+            handChangeY() {
+                this.arrs = [];
+                if (this.selectedY == '1px/20uv') {
+                    this.YHeight = 20;
+                    this.YNameHeight = 1;
+
+                } else if (this.selectedY == '1px/10uv') {
+                    this.YHeight = 10;
+                    this.YNameHeight = 1;
+                }
+                setTimeout(() => {
+                    this.initCanvas();
+                });
+            },
+            //  初始化
+            initCanvas() {
+                var c_canvas = document.getElementById("ecg");
+                this.drawLine(c_canvas);
+            },
+            //小网格
+            drawSmallGrid(c_canvas) {
+                if (c_canvas.getContext) {
+                    var context = c_canvas.getContext("2d");
+                    context.strokeStyle = "#f1dedf";
+                    context.strokeWidth = 1;
+                    context.beginPath();            //新建一条路径，路径一旦创建成功，图形绘制命令被指向到路径上生成路径
+                    for (var x = 0.5; x < this.XLength * this.selected; x += 2) {          //x轴
+                        context.moveTo(x, 0);     //路径的起始坐标
+                        context.lineTo(x, this.XLength);
+                        context.stroke();   //线条来绘制图形轮廓
+                    }
+                    for (var y = 0.5; y < this.XLength; y += 2) {
+                        context.moveTo(0, y);
+                        context.lineTo(this.XLength * this.selected, y);
+                        context.stroke();
+                    }
+                    context.closePath();   //闭合路径之后，图形绘制命令又重新指向到上下文中
+                }
+            },
+            //中网格
+            drawMediumGrid(c_canvas) {
+                var context = c_canvas.getContext("2d");
+                context.strokeStyle = "#f0adaa";
+                context.strokeWidth = 1;
+                context.beginPath();
+                for (var x = 0.5; x < this.XLength * this.selected; x += 10) {
+                    context.moveTo(x, 0);
+                    context.lineTo(x, this.XLength);
+                    context.stroke();
+                }
+                for (var y = 0.5; y < this.XLength; y += 10) {
+                    context.moveTo(0, y);
+                    context.lineTo(this.XLength * this.selected, y);
+                    context.stroke();
+                }
+                context.closePath();
+            },
+            //大网格
+            drawBigGrid(c_canvas) {
+                var context = c_canvas.getContext("2d");
+                context.strokeStyle = "#e0514b";
+                context.strokeWidth = 1;
+                context.beginPath();
+                for (var x = 0.5; x < this.XLength * this.selected; x += 50) {
+                    context.moveTo(x, 0);
+                    context.lineTo(x, this.XLength);
+                    context.stroke();
+                }
+                for (var y = 0.5; y < this.XLength; y += 50) {
+                    context.moveTo(0, y);
+                    context.lineTo(this.XLength * this.selected, y);
+                    context.stroke();
+                }
+                context.closePath();
+            },
+            // 画网格
+            drawingGrid(c_canvas) {
+                this.drawSmallGrid(c_canvas);   //最小的网格
+                this.drawMediumGrid(c_canvas);   //中等网格
+                this.drawBigGrid(c_canvas);  //大网格
+            },
+            //  初始化 心电图
+            drawLine(c_canvas) {
+                var ctx = c_canvas.getContext('2d');
+                ctx.strokeWidth = 1;
+                ctx.clearRect(0, 0, c_canvas.width, c_canvas.height);   // 变化时清除原来的线
+                this.paintingElectrocardiogram(ctx, c_canvas);
+            },
+            //     算心电图
+            paintingElectrocardiogram(ctx, c_canvas) {
+                this.arrs.push(arr);
+                this.arrs.push(arr);
+                this.arrs.push(arr2);
+                this.TotalTime = parseInt(0.002 * arr.length);  //总时间
+                if (this.TotalTime == 10 && arr.length >= 4995 || arr.length <= 5005) {   //10 秒 5001 个点    500导联   // if(1/0.002==500)
+                    this.standardPressure = 4.88;                           //标准电压
+                    this.XLength = this.TotalTime * 50 + 51;              //10秒基数为551
+                    this.interval = 10;               // 10个点用1个点
+                    this.drawingGrid(c_canvas);     //画网格
+                    this.CalculationCanvas(ctx, arr2);
+                } else if (1 / 0.004 == 250) {             //250  导联
+                    this.XLength = this.TotalTime * 50 + 51;            //默认10秒 ，基数551
+                    this.interval = 5;               // 5个点用1个点
+                    this.drawingGrid(c_canvas);
+                    this.CalculationCanvas(ctx, arr);
+                } else if (1 / 0.008 == 125) {            //125 导联
+                    this.XLength = this.TotalTime * 50 + 51;            //默认10秒 ，基数551
+                    this.interval = 1;               //   this.interval=2.5;     2.5个点用1个点   先取两个中一个  再取后三个中一个
+                    this.drawingGrid(c_canvas);
+                    ctx.beginPath();
+                    for (var x = 50, i = 1; x < this.XLength * this.selected; x++, i++) {
+                        if (i % 2 == 0) {
+                            ctx.lineTo(x, -arr[Math.round((x - 49 + 2) * this.interval / this.selected)] * this.standardPressure / this.YHeight + ((i + 1) * 100))
+                        } else {
+                            ctx.lineTo(x, -arr[Math.round((x - 49 + 3) * this.interval / this.selected)] * this.standardPressure / this.YHeight + ((i + 1) * 100))
+                        }
+                    }
+                }
+            },
+            //  计算导联图
+            CalculationCanvas(ctx) {
+                ctx.strokeStyle = "#000000";
+                for (let i = 0; i < this.arrs.length; i++) {
+                    this.canvasTitle(ctx, i);
+                    ctx.beginPath();
+                    for (var x = 50; x < this.XLength * this.selected; x++) {
+                        ctx.lineTo(x, -this.arrs[i][Math.round((x - 49) * this.interval / this.selected)] * this.standardPressure / this.YHeight + ((i + 1) * 100));
+                    }
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+            },
+            //    基线
+            canvasTitle(ctx, i) {
+                ctx.beginPath();
+                //  根据i 和 y轴坐标的关系，得到以下关系  (（i+1）*2-1)*50
+                ctx.moveTo(0, 50 + ((i + 1) * 2 - 1) * 50);
+                ctx.lineTo(10, 50 + ((i + 1) * 2 - 1) * 50);
+                if (this.selectedY == '1px/10uv') {
+                    ctx.lineTo(10, ((i + 1) * 2 - 1) * 50 - 50);
+                    ctx.lineTo(30, ((i + 1) * 2 - 1) * 50 - 50);
+                } else if (this.selectedY == '1px/20uv') {
+                    ctx.lineTo(10, ((i + 1) * 2 - 1) * 50);
+                    ctx.lineTo(30, ((i + 1) * 2 - 1) * 50);
+                }
+                ctx.lineTo(30, 50 + ((i + 1) * 2 - 1) * 50);
+                ctx.lineTo(40, 50 + ((i + 1) * 2 - 1) * 50);
+                ctx.stroke();
+                ctx.closePath();
+                    ctx.font = "20px Courier New";
+                    ctx.strokeText(this.jointName[i], 35, ((i + 1) * 2 - 1) * 50+30);
+            },
+            ////////////////////////////////////////////////
+            //  鼠标按下
+            myOnmousedown(e){
+                e=e || window.event;
+                this.e = e || window.event;
+                this.startX = e.pageX;
+                this.startY = e.pageY;
+                // 如果鼠标在 box 上被按下
+                if(e.target.className.match(/box/)) {
+                    // 允许拖动
+                    this.dragging = true;
+                    // 设置当前 box 的 id 为 moving_box
+                    if(document.getElementById("moving_box") !== null) {
+                        document.getElementById("moving_box").removeAttribute("id");
+                    }
+                    e.target.id = "moving_box";
+                    // 计算坐标差值
+                    this.diffX = this.startX - e.target.offsetLeft;
+                    this.diffY = this.startY - e.target.offsetTop;
+                    console.log(document.getElementById("active_box"));
+                }else{
+                    // 在页面创建 box
+                    var active_box = document.createElement("div");
+                    active_box.id = "active_box";
+                    active_box.className = "box";
+                    active_box.style.top = this.startY + 'px';
+                    active_box.style.left = this.startX + 'px';
+                    console.log(active_box);
+                    document.getElementById('example').appendChild(active_box);
+                    active_box = null;
+                }
+            },
+        //     鼠标移动
+            myOnmousemove(e){
+                // 更新 box 尺寸
+                e = e || window.event;
+                let active_box=document.getElementById("active_box");
+                if(document.getElementById("active_box") !== null) {
+                    var ab = document.getElementById("active_box");
+                    ab.style.width = e.pageX - this.startX + 'px';
+                    ab.style.height = e.pageY - this.startY + 'px';
+                    console.log(ab.style.width, ab.style.height);
+                }
+                // 移动，更新 box 坐标
+                if(document.getElementById("moving_box") !== null && this.dragging) {
+                    var mb = document.getElementById("moving_box");
+                    mb.style.top = e.pageY - this.diffY + 'px';
+                    mb.style.left = e.pageX - this.diffX + 'px';
+                    console.log(mb.style.left);
+                }
+            },
+        //     鼠标抬起
+            myOnmouseup(){
+                this.mouseup=null;
+                this.mousemove=null;
+                // 禁止拖动
+                this.dragging = false;
+                if(document.getElementById("active_box") !== null) {
+                    var ab = document.getElementById("active_box");
+                    ab.removeAttribute("id");
+                    if(ab.offsetWidth < 3 || ab.offsetHeight < 3) {
+                        document.getElementById('example').removeChild(ab);
+                    }
+                }
+            }
+        }
+    })
+</script>
+</html>
