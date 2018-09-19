@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>jq版canvas画心电图</title>
+    <script src="data.js" type="text/javascript"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .time {
+            display: inline-block;
+            width: 50px;
+        }
+
+        .time_l {
+            margin-left: 42px;
+            display: inline-block;
+            width: 50px;
+        }
+
+        .box {
+            background: #c1c1c1;
+            width: 0;
+            height: 0;
+            position: absolute;
+            opacity: 0.5;
+            cursor: move;
+            z-index: 99999;
+            font-weight: 200;
+        }
+
+        #example {
+            position: relative;
+        }
+
+        .measure {
+            cursor: pointer;
+        }
+
+        .time_x {
+            white-space: nowrap;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+    </style>
+</head>
+<body>
+<div id="example-3">
+    <div style="height: 30px;">
+        <select value="1px/0.02ms" id="handChange">
+            <option>1px/0.02ms</option>
+            <option>1px/0.01ms</option>
+            <option>1px/0.005ms</option>
+        </select>
+        <select value="1px/20uv" id="handChangeY">
+            <option>1px/20uv</option>
+            <option>1px/10uv</option>
+        </select>
+        <span class="measure">
+            测量
+        </span>
+    </div>
+    <div id="example">
+        <canvas id="ecg"></canvas>
+        <div class="time_x"></div>
+    </div>
+</div>
+<script src="jquery-1.11.3.js" type="text/javascript"></script>
+<script type="text/javascript" src="canvas.js"></script>
+<script type="text/javascript">
+    //用法: 找到canvas 目标元素 ，初始化   ，根据具体情况设置宽高 ，默认为551 551  ，
+    //  把数据放到 名为  arrs 的数组中    ，
+    // x轴是根据事件长度计算的 ，所以 TotalTime 为x 轴长度，具体根据时间算的 例：TotalTime = parseInt(0.002 * arr.length);
+    // 注意 ：初始化的时候 需要把该的地方  复制到  initCanvas方法里面
+    window.onload = function () {
+        //  初始化
+        var c_canvas = document.getElementById("ecg");
+        arrs.push(arr);
+        arrs.push(arr);
+        arrs.push(arr2);
+        TotalTime = parseInt(0.002 * arr.length);  //总时间
+        remove();
+        drawLine(c_canvas, '1');  //目标元素 ，宽度
+    }
+
+</script>
+</body>
+</html>
