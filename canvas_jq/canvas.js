@@ -218,6 +218,8 @@ $('.measure').on('click', function () {
     if (measure) {
         $('.measure').html('关闭');
     } else {
+        boxFlag = false;
+        $('.box').remove();
         $('.measure').html('测量');
     }
 });
@@ -243,7 +245,7 @@ $('#ecg').mousedown(function (e) {
     startX = e.pageX;
     startY = e.pageY;
     boxFlag = true;
-    remove();
+    $('.box').remove();
     // 判断是否已有box
     if (boxFlag) {
         // 在页面创建 box
